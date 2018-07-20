@@ -2,7 +2,7 @@ import argparse
 import logging
 
 import tensorflow as tf
-from pose.tf_pose_estimation.tf_pose.networks import get_network
+from tf_pose.networks import get_network
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 

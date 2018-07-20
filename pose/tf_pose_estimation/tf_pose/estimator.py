@@ -8,15 +8,16 @@ import numpy as np
 import tensorflow as tf
 import time
 
-from pose.tf_pose_estimation.tf_pose import common
-from pose.tf_pose_estimation.tf_pose.common import CocoPart
-from pose.tf_pose_estimation.tf_pose.tensblur.smoother import Smoother
+from tf_pose import common
+from tf_pose.common import CocoPart
+from tf_pose.tensblur.smoother import Smoother
 
 try:
-    from pose.tf_pose_estimation.tf_pose.pafprocess import pafprocess
+    from tf_pose.pafprocess import pafprocess
 except ModuleNotFoundError as e:
     print(e)
-    print('you need to build c++ library for pafprocess. See : https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess')
+    print(
+        'you need to build c++ library for pafprocess. See : https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess')
     exit(-1)
 
 logger = logging.getLogger('TfPoseEstimator')
@@ -403,6 +404,315 @@ class TfPoseEstimator:
                 cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
 
         return npimg
+
+    # @staticmethod
+    # def evaluate_flexion(humans):
+    #     for human in humans:
+    #
+    #         l_shoulder = False
+    #         r_shoulder = False
+    #         l_elbow = False
+    #         r_elbow = False
+    #         l_wrist = False
+    #         r_wrist = False
+    #
+    #         for i in range(common.CocoPart.Background.value):
+    #
+    #             if i not in human.body_parts.keys():
+    #                 continue
+    #
+    #             if i in [1, 2, 3, 4, 5, 6, 7, 8, 11]:
+    #                 if i is 2:
+    #                     l_shoulder = human.body_parts[i]
+    #                 if i is 3:
+    #                     l_elbow = human.body_parts[i]
+    #                 if i is 4:
+    #                     l_wrist = human.body_parts[i]
+    #                 if i is 5:
+    #                     r_shoulder = human.body_parts[i]
+    #                 if i is 6:
+    #                     r_elbow = human.body_parts[i]
+    #                 if i is 7:
+    #                     r_wrist = human.body_parts[i]
+    #
+    #         if all([l_shoulder, l_elbow, l_wrist]):
+    #             logger.info("We see full left arm.")
+    #             logger.info(l_shoulder.x)
+    #             logger.info(l_shoulder.y)
+    #             logger.info(l_elbow.x)
+    #             logger.info(l_elbow.y)
+    #             logger.info(l_wrist.x)
+    #             logger.info(l_wrist.y)
+    #             logger.info("---------------------")
+    #
+    #         if all([r_shoulder, r_elbow, r_wrist]):
+    #             logger.info("We see full right arm.")
+    #             logger.info(r_shoulder.x)
+    #             logger.info(r_shoulder.y)
+    #             logger.info(r_elbow.x)
+    #             logger.info(r_elbow.y)
+    #             logger.info(r_wrist.x)
+    #             logger.info(r_wrist.y)
+    #             logger.info("---------------------")
+    #
+    #     return True
+
+    ### Atomic Kittens ###
+    #@staticmethod
+    #def calculate_angle(upper,lower):
+    #    norm_angle = np.dot(upper,lower) / (np.linalg.norm(upper) * np.linalg.norm(lower))
+    #    angle = np.degrees(np.arccos(norm_angle))
+    #    return angle
+
+    @staticmethod
+    def evaluate_flexion(npimg, humans, imgcopy=False):
+
+        if imgcopy:
+            npimg = np.copy(npimg)
+        image_h, image_w = npimg.shape[:2]
+        centers = {}
+
+        for human in humans:
+
+            nose = False
+            throat = False
+            r_shoulder = False
+            r_elbow = False
+            r_wrist = False
+            l_shoulder = False
+            l_elbow = False
+            l_wrist = False
+            r_hip = False
+            r_knee = False
+            r_foot = False
+            l_hip = False
+            l_knee = False
+            l_foot = False
+            r_eye = False
+            l_eye = False
+            l_ear = False
+            l_ear = False
+            r_elbow_angle = 0
+            l_elbow_angle = 0
+            r_abduction_angle = 0
+            l_abduction_angle = 0
+            r_wrist_height = False
+            l_wrist_height = False
+
+            for i in range(common.CocoPart.Background.value):
+
+                if i not in human.body_parts.keys():
+                    continue
+
+                if i in range(17):
+                    if i is 0:
+                        nose       = human.body_parts[i]
+                    if i is 1:
+                        throat     = human.body_parts[i]
+                    if i is 2:
+                        r_shoulder = human.body_parts[i]
+                    if i is 3:
+                        r_elbow    = human.body_parts[i]
+                    if i is 4:
+                        r_wrist    = human.body_parts[i]
+                    if i is 5:
+                        l_shoulder = human.body_parts[i]
+                    if i is 6:
+                        l_elbow    = human.body_parts[i]
+                    if i is 7:
+                        l_wrist    = human.body_parts[i]
+                    if i is 8:
+                        r_hip      = human.body_parts[i]
+                    if i is 9:
+                        r_knee     = human.body_parts[i]
+                    if i is 10:
+                        r_foot     = human.body_parts[i]
+                    if i is 11:
+                        l_hip      = human.body_parts[i]
+                    if i is 12:
+                        l_knee     = human.body_parts[i]
+                    if i is 13:
+                        l_foot     = human.body_parts[i]
+                    if i is 14:
+                        r_eye      = human.body_parts[i]
+                    if i is 15:
+                        l_eye      = human.body_parts[i]
+                    if i is 16:
+                        r_ear      = human.body_parts[i]
+                    if i is 17:
+                        l_ear      = human.body_parts[i]
+
+            # Left Elbow Angle
+            if all([l_shoulder, l_elbow, l_wrist]):
+                l_shoulder_xy = np.array([l_shoulder.x, l_shoulder.y])
+                l_elbow_xy = np.array([l_elbow.x, l_elbow.y])
+                l_wrist_xy = np.array([l_wrist.x, l_wrist.y])
+                l_upper_arm = l_shoulder_xy - l_elbow_xy
+                l_lower_arm = l_wrist_xy - l_elbow_xy
+                #print(calculate_angle(l_upper_arm,l_lower_arm))
+                l_cos_angle = np.dot(l_upper_arm, l_lower_arm) / (
+                    np.linalg.norm(l_upper_arm) * np.linalg.norm(l_lower_arm))
+                l_angle = np.arccos(l_cos_angle)
+                l_elbow_angle = np.degrees(l_angle)
+
+            # Right Elbow Angle
+            if all([r_shoulder, r_elbow, r_wrist]):
+                r_shoulder_xy = np.array([r_shoulder.x, r_shoulder.y])
+                r_elbow_xy = np.array([r_elbow.x, r_elbow.y])
+                r_wrist_xy = np.array([r_wrist.x, r_wrist.y])
+                r_upper_arm = r_shoulder_xy - r_elbow_xy
+                r_lower_arm = r_wrist_xy - r_elbow_xy
+                r_cos_angle = np.dot(r_upper_arm, r_lower_arm) / (
+                    np.linalg.norm(r_upper_arm) * np.linalg.norm(r_lower_arm))
+                r_angle = np.arccos(r_cos_angle)
+                r_elbow_angle = np.degrees(r_angle)
+
+            # Abduction Right
+                # Body Core Calculated
+            #if all([l_hip, r_hip, throat, r_shoulder, r_elbow, r_wrist]) and r_elbow_angle > 150:
+                # Body Core
+                #throat_xy = np.array([throat.x, throat.y])
+                #l_hip_xy  = np.array([l_hip.x,  l_hip.y])
+                #r_hip_xy  = np.array([r_hip.x,  r_hip.y])
+                #m_hip_xy  = (l_hip_xy + r_hip_xy) / 2
+                #body_core = m_hip_xy - throat_xy # or reverse: throat_xy - m_hip_xy
+                # Body Core Fake (Vertical Line)
+            if all([r_shoulder, r_elbow, r_wrist]) and r_elbow_angle > 150:
+                body_core = np.array([0,-1])
+                # Right Arm
+                r_shoulder_xy = np.array([r_shoulder.x, r_shoulder.y])
+                r_wrist_xy    = np.array([r_wrist.x, r_wrist.y])
+                r_arm         = r_shoulder_xy - r_wrist_xy
+                r_cos_angle = np.dot(r_arm, body_core) / (
+                    np.linalg.norm(r_arm) * np.linalg.norm(body_core))
+                r_angle = np.arccos(r_cos_angle)
+                r_abduction_angle = np.degrees(r_angle)
+                #print("Right Abduction: "+str(r_abduction_angle))
+
+            # Abduction Left
+                # Body Core Calculated
+            #if all([l_hip, r_hip, throat, r_shoulder, r_elbow, r_wrist]) and r_elbow_angle > 150:
+                # Body Core
+                #throat_xy = np.array([throat.x, throat.y])
+                #l_hip_xy  = np.array([l_hip.x,  l_hip.y])
+                #r_hip_xy  = np.array([r_hip.x,  r_hip.y])
+                #m_hip_xy  = (l_hip_xy + r_hip_xy) / 2
+                #body_core = throat_xy - m_hip_xy
+                # Body Core Fake (Vertical Line)
+            if all([l_shoulder, l_elbow, l_wrist]) and l_elbow_angle > 150:
+                body_core = np.array([0,-1])
+                # Right Arm
+                l_shoulder_xy = np.array([l_shoulder.x, l_shoulder.y])
+                l_wrist_xy    = np.array([l_wrist.x, l_wrist.y])
+                l_arm         = l_shoulder_xy - l_wrist_xy
+                l_cos_angle = np.dot(l_arm, body_core) / (
+                    np.linalg.norm(l_arm) * np.linalg.norm(body_core))
+                l_angle = np.arccos(l_cos_angle)
+                l_abduction_angle = np.degrees(l_angle)
+                #print("Left Abduction: "+str(l_abduction_angle))
+
+
+
+
+            ## Abduction Left
+            #if all([l_hip, r_hip, throat, l_shoulder, l_elbow, l_wrist]) and l_elbow_angle > 150:
+            #    # Body Core
+            #    throat_xy = np.array([throat.x, throat.y])
+            #    l_hip_xy  = np.array([l_hip.x,  l_hip.y])
+            #    r_hip_xy  = np.array([r_hip.x,  r_hip.y])
+            #    m_hip_xy  = (l_hip_xy + r_hip_xy) / 2
+            #    body_core = throat_xy - m_hip_xy
+            #    # Left Arm
+            #    l_shoulder_xy = np.array([l_shoulder.x, l_shoulder.y])
+            #    l_wrist_xy    = np.array([l_wrist.x, l_wrist.y])
+            #    l_arm         = l_shoulder_xy - l_wrist_xy
+            #    l_cos_angle = np.dot(l_arm, body_core) / (
+            #        np.linalg.norm(l_arm) * np.linalg.norm(body_core))
+            #    l_angle = np.arccos(l_cos_angle)
+            #    l_abduction_angle = np.degrees(l_angle)
+            #    #print("Left  Abduction: "+str(l_abduction_angle))
+
+            # Position Hand
+            if all([l_hip, r_hip, throat, r_wrist]):
+                # Body Core
+                throat_xy = np.array([throat.x, throat.y])
+                l_hip_xy  = np.array([l_hip.x,  l_hip.y])
+                r_hip_xy  = np.array([r_hip.x,  r_hip.y])
+                m_hip_xy  = (l_hip_xy + r_hip_xy) / 2
+                m_hip_w   = abs(l_hip.x - r_hip.x) # Hip Width
+                torso_xy = m_hip_xy - throat_xy
+                # Arm
+                r_wrist_xy = np.array([r_wrist.x, r_wrist.y])
+                # Distance between wrist and hip normalised by width of the hip in percent
+                if m_hip_w == 0:
+                    pass
+                else:
+                    r_wrist_dx = (r_wrist.x - r_hip.x) * 100 / m_hip_w 
+                    if abs(r_wrist_dx) < 30:
+                        # Height of the hand normalised to length of the upper body
+                        r_wrist_height = (m_hip_xy[1] - r_wrist.y) * 100 / torso_xy[1]
+                    else:
+                        r_wrist_height = False
+                        l_wrist_height = False
+
+            # Position Right Hand
+            if all([l_hip, r_hip, throat, l_wrist]):
+                # Body Core
+                throat_xy = np.array([throat.x, throat.y])
+                l_hip_xy  = np.array([l_hip.x,  l_hip.y])
+                r_hip_xy  = np.array([r_hip.x,  r_hip.y])
+                m_hip_xy  = (l_hip_xy + r_hip_xy) / 2
+                m_hip_w   = abs(l_hip.x - r_hip.x) # Hip Width
+                torso_xy = m_hip_xy - throat_xy
+                # Left Arm
+                l_wrist_xy = np.array([l_wrist.x, l_wrist.y])
+                # Distance between wrist and hip normalised by width of the hip in percent
+                if m_hip_w == 0:
+                    pass
+                else:
+                    l_wrist_dx = (l_wrist.x - l_hip.x) * 100 / m_hip_w 
+                    if abs(l_wrist_dx) < 30:
+                        # Height of the hand normalised to length of the upper body
+                        l_wrist_height = (m_hip_xy[1] - l_wrist.y) * 100 / torso_xy[1]
+                    else:
+                        l_wrist_height = 0
+
+
+            if r_elbow_angle:
+                cv2.putText(npimg, "{0:.2f}".format(r_elbow_angle),
+                            (int(r_elbow.x * image_w + 0.5), int(r_elbow.y * image_h + 0.5)), cv2.FONT_HERSHEY_SIMPLEX,
+                            1, (0, 0, 255), 2, cv2.LINE_AA)
+                # logger.info("Right ellbow: "+str(r_elbow_angle))
+            if l_elbow_angle:
+                cv2.putText(npimg, "{0:.2f}".format(l_elbow_angle),
+                            (int(l_elbow.x * image_w + 0.5), int(l_elbow.y * image_h + 0.5)), cv2.FONT_HERSHEY_SIMPLEX,
+                            1, (0, 0, 255), 2, cv2.LINE_AA)
+
+            if r_abduction_angle:
+                cv2.putText(npimg, "{0:.2f}".format(r_abduction_angle),
+                            (int(r_shoulder.x * image_w + 0.5), int(r_shoulder.y * image_h + 0.5)), cv2.FONT_HERSHEY_SIMPLEX,
+                            1, (0, 0, 255), 2, cv2.LINE_AA)
+
+            if l_abduction_angle:
+                cv2.putText(npimg, "{0:.2f}".format(l_abduction_angle),
+                            (int(l_shoulder.x * image_w + 0.5), int(l_shoulder.y * image_h + 0.5)), cv2.FONT_HERSHEY_SIMPLEX,
+                            1, (0, 0, 255), 2, cv2.LINE_AA)
+                # logger.info("Left ellbow: "+str(l_elbow_angle))
+
+            if r_wrist_height:
+                cv2.putText(npimg, "{0:.2f}".format(r_wrist_height),
+                            (int(r_wrist.x * image_w + 0.5), int(r_wrist.y * image_h + 0.5)), cv2.FONT_HERSHEY_SIMPLEX,
+                            1, (0, 0, 255), 2, cv2.LINE_AA)
+
+            if l_wrist_height:
+                cv2.putText(npimg, "{0:.2f}".format(l_wrist_height),
+                            (int(l_wrist.x * image_w + 0.5), int(l_wrist.y * image_h + 0.5)), cv2.FONT_HERSHEY_SIMPLEX,
+                            1, (0, 0, 255), 2, cv2.LINE_AA)
+
+
+        return npimg
+
+        ### Atomic Kittens ###
 
     def _get_scaled_img(self, npimg, scale):
         get_base_scale = lambda s, w, h: max(self.target_size[0] / float(h), self.target_size[1] / float(w)) * s

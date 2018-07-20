@@ -118,3 +118,9 @@ models/pretrained/resnet_v2_101/train.graph
 src/pafprocess/pafprocess.py
 src/pafprocess/pafprocess_wrap.cpp
 src/pafprocess/pafprocess_wrap.cxx
+
+pose/tf_pose_estimation/\.DS_Store
+
+pose/\.DS_Store
+
+\.DS_Store
